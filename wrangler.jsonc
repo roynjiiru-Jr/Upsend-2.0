@@ -12,5 +12,11 @@
       "database_name": "upsend-production",
       "database_id": "will-be-filled-on-production"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "upsend-images"
+    }
   ]
 }

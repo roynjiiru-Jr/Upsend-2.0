@@ -23,6 +23,53 @@ app.route('/api/events', events);
 app.route('/api/messages', messages);
 app.route('/api/contributions', contributions);
 
+// Image upload endpoint
+app.post('/api/upload-image', async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get('image') as File;
+    
+    if (!file) {
+      return c.json({ error: 'No image file provided' }, 400);
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return c.json({ error: 'File must be an image' }, 400);
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      return c.json({ error: 'Image must be less than 5MB' }, 400);
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(7);
+    const extension = file.name.split('.').pop();
+    const key = `events/${timestamp}-${randomStr}.${extension}`;
+
+    // Upload to R2
+    await c.env.IMAGES.put(key, file.stream(), {
+      httpMetadata: {
+        contentType: file.type,
+      },
+    });
+
+    // Return public URL (for local dev, we'll use a placeholder pattern)
+    const publicUrl = `https://pub-upsend.r2.dev/${key}`;
+    
+    return c.json({ 
+      success: true,
+      url: publicUrl,
+      key: key
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return c.json({ error: 'Failed to upload image' }, 500);
+  }
+});
+
 // Frontend pages
 app.get('/', (c) => {
   return c.html(`
@@ -384,11 +431,15 @@ app.get('/create-event', (c) => {
                     </div>
 
                     <div class="mb-6">
-                        <label class="block text-gray-700 font-medium mb-2">Cover Image URL (optional)</label>
-                        <input type="url" id="cover_image" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent" placeholder="https://example.com/image.jpg">
+                        <label class="block text-gray-700 font-medium mb-2">Cover Image (optional)</label>
+                        <input type="file" id="cover_image" accept="image/*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent">
+                        <div id="image-preview" class="mt-4" style="display:none;">
+                            <img id="preview-img" src="" alt="Preview" class="max-w-full h-48 object-cover rounded-lg">
+                        </div>
+                        <div id="upload-status" class="mt-2 text-sm text-gray-600"></div>
                     </div>
 
-                    <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                    <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-200">
                         Create Event
                     </button>
 
@@ -400,26 +451,70 @@ app.get('/create-event', (c) => {
         <script>
             axios.defaults.headers.common['Authorization'] = 'Bearer ' + localStorage.getItem('session_token');
 
+            let uploadedImageUrl = null;
+
+            // Handle image preview
+            document.getElementById('cover_image').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        document.getElementById('preview-img').src = e.target.result;
+                        document.getElementById('image-preview').style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
             document.getElementById('create-event-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
                 const title = document.getElementById('title').value;
                 const description = document.getElementById('description').value;
                 const event_date = document.getElementById('event_date').value;
-                const cover_image = document.getElementById('cover_image').value;
+                const coverImageFile = document.getElementById('cover_image').files[0];
+                const submitBtn = document.getElementById('submit-btn');
+                const statusDiv = document.getElementById('upload-status');
 
                 try {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Creating Event...';
+
+                    // Upload image if selected
+                    let cover_image_url = null;
+                    if (coverImageFile) {
+                        statusDiv.textContent = 'Uploading image...';
+                        const formData = new FormData();
+                        formData.append('image', coverImageFile);
+
+                        const uploadResponse = await axios.post('/api/upload-image', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        });
+
+                        if (uploadResponse.data.success) {
+                            cover_image_url = uploadResponse.data.url;
+                            statusDiv.textContent = 'Image uploaded!';
+                        }
+                    }
+
+                    // Create event
+                    statusDiv.textContent = 'Creating event...';
                     const response = await axios.post('/api/events/create', {
                         title,
                         description: description || undefined,
                         event_date,
-                        cover_image: cover_image || undefined
+                        cover_image: cover_image_url || undefined
                     });
 
                     if (response.data.success) {
                         window.location.href = '/dashboard';
                     }
                 } catch (error) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Event';
+                    statusDiv.textContent = '';
                     const errorDiv = document.getElementById('error-message');
                     errorDiv.textContent = error.response?.data?.error || 'Failed to create event';
                     errorDiv.style.display = 'block';
