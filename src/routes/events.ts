@@ -8,7 +8,8 @@ const events = new Hono<{ Bindings: Bindings }>();
 events.post('/create', requireAuth, async (c) => {
   try {
     const user = c.get('user');
-    const { title, description, event_date, cover_image }: CreateEventRequest = await c.req.json();
+    const body = await c.req.json();
+    const { title, description, event_date, cover_image, images } = body;
     
     if (!title || !event_date) {
       return c.json({ error: 'Title and event date are required' }, 400);
@@ -38,6 +39,16 @@ events.post('/create', requireAuth, async (c) => {
     `).bind(user.id, title, description || null, event_date, cover_image || null, shareableLink).run();
 
     const eventId = result.meta.last_row_id;
+
+    // Insert multiple images if provided
+    if (images && Array.isArray(images) && images.length > 0) {
+      for (const img of images) {
+        await db.prepare(`
+          INSERT INTO event_images (event_id, image_url, image_key, is_cover, display_order)
+          VALUES (?, ?, ?, ?, ?)
+        `).bind(eventId, img.url, img.key, img.is_cover || 0, img.display_order || 0).run();
+      }
+    }
 
     return c.json({ 
       success: true,
@@ -168,15 +179,62 @@ events.get('/creator/:eventId', requireAuth, async (c) => {
       WHERE event_id = ?
     `).bind(eventId).first();
 
+    // Get event images
+    const imagesResult = await db.prepare(`
+      SELECT id, image_url, image_key, is_cover, display_order
+      FROM event_images
+      WHERE event_id = ?
+      ORDER BY display_order ASC
+    `).bind(eventId).all();
+
     return c.json({
       event,
       messages: messagesResult.results || [],
       contributions: contributionsResult.results || [],
-      total_contributions: totalResult?.total || 0
+      total_contributions: totalResult?.total || 0,
+      images: imagesResult.results || []
     });
   } catch (error) {
     console.error('Get creator event details error:', error);
     return c.json({ error: 'Failed to get event details' }, 500);
+  }
+});
+
+// Delete event image (requires auth)
+events.delete('/image/:imageId', requireAuth, async (c) => {
+  try {
+    const user = c.get('user');
+    const imageId = c.req.param('imageId');
+    const db = c.env.DB;
+
+    // Get image and verify ownership
+    const image = await db.prepare(`
+      SELECT ei.*, e.user_id
+      FROM event_images ei
+      JOIN events e ON ei.event_id = e.id
+      WHERE ei.id = ? AND e.user_id = ?
+    `).bind(imageId, user.id).first();
+
+    if (!image) {
+      return c.json({ error: 'Image not found or unauthorized' }, 404);
+    }
+
+    // Delete from R2
+    try {
+      await c.env.IMAGES.delete(image.image_key as string);
+    } catch (r2Error) {
+      console.error('R2 delete error:', r2Error);
+    }
+
+    // Delete from database
+    await db.prepare(`
+      DELETE FROM event_images WHERE id = ?
+    `).bind(imageId).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Delete image error:', error);
+    return c.json({ error: 'Failed to delete image' }, 500);
   }
 });
 

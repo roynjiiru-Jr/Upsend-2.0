@@ -454,11 +454,21 @@ app.get('/create-event', (c) => {
                     </div>
 
                     <div class="mb-6">
-                        <label class="block text-gray-700 font-medium mb-2">Cover Image (optional)</label>
-                        <input type="file" id="cover_image" accept="image/*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent">
-                        <div id="image-preview" class="mt-4" style="display:none;">
-                            <img id="preview-img" src="" alt="Preview" class="max-w-full h-48 object-cover rounded-lg">
+                        <label class="block text-gray-700 font-medium mb-2">Event Images (optional)</label>
+                        <p class="text-sm text-gray-500 mb-3">Upload up to 5 images. First image will be the cover. Max 5MB per image.</p>
+                        
+                        <!-- Drag and Drop Zone -->
+                        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-500 transition-colors cursor-pointer">
+                            <input type="file" id="cover_image" accept="image/*" multiple class="hidden">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                            <p class="text-gray-600 mb-2">Drag & drop images here or click to browse</p>
+                            <p class="text-sm text-gray-400">PNG, JPG, GIF up to 5MB each</p>
                         </div>
+                        
+                        <!-- Image Previews Grid -->
+                        <div id="images-grid" class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4" style="display:none;">
+                        </div>
+                        
                         <div id="upload-status" class="mt-2 text-sm text-gray-600"></div>
                     </div>
 
@@ -474,20 +484,133 @@ app.get('/create-event', (c) => {
         <script>
             axios.defaults.headers.common['Authorization'] = 'Bearer ' + localStorage.getItem('session_token');
 
-            let uploadedImageUrl = null;
+            let selectedFiles = [];
+            const MAX_FILES = 5;
+            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-            // Handle image preview
-            document.getElementById('cover_image').addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
+            // Drag and drop functionality
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('cover_image');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-purple-500', 'bg-purple-50');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-purple-500', 'bg-purple-50');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-purple-500', 'bg-purple-50');
+                const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                handleFiles(files);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                handleFiles(files);
+            });
+
+            async function handleFiles(files) {
+                for (const file of files) {
+                    if (selectedFiles.length >= MAX_FILES) {
+                        alert(\`Maximum \${MAX_FILES} images allowed\`);
+                        break;
+                    }
+
+                    if (file.size > MAX_FILE_SIZE) {
+                        alert(\`\${file.name} is too large. Max 5MB per image.\`);
+                        continue;
+                    }
+
+                    // Compress and resize image
+                    const compressedFile = await compressImage(file);
+                    selectedFiles.push(compressedFile);
+                    displayImagePreview(compressedFile, selectedFiles.length - 1);
+                }
+
+                document.getElementById('images-grid').style.display = selectedFiles.length > 0 ? 'grid' : 'none';
+            }
+
+            async function compressImage(file) {
+                return new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        document.getElementById('preview-img').src = e.target.result;
-                        document.getElementById('image-preview').style.display = 'block';
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+
+                            // Resize if larger than 1920px
+                            const maxDimension = 1920;
+                            if (width > maxDimension || height > maxDimension) {
+                                if (width > height) {
+                                    height = (height / width) * maxDimension;
+                                    width = maxDimension;
+                                } else {
+                                    width = (width / height) * maxDimension;
+                                    height = maxDimension;
+                                }
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            canvas.toBlob((blob) => {
+                                const compressedFile = new File([blob], file.name, {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now()
+                                });
+                                resolve(compressedFile);
+                            }, 'image/jpeg', 0.85);
+                        };
+                        img.src = e.target.result;
                     };
                     reader.readAsDataURL(file);
+                });
+            }
+
+            function displayImagePreview(file, index) {
+                const grid = document.getElementById('images-grid');
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'relative group';
+                    div.innerHTML = \`
+                        <img src="\${e.target.result}" class="w-full h-32 object-cover rounded-lg border-2 border-gray-200">
+                        <div class="absolute top-2 left-2 bg-purple-600 text-white text-xs px-2 py-1 rounded">
+                            \${index === 0 ? 'Cover' : \`Image \${index + 1}\`}
+                        </div>
+                        <button type="button" onclick="removeImage(\${index})" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                        <div class="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                            \${(file.size / 1024).toFixed(0)}KB
+                        </div>
+                    \`;
+                    grid.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            window.removeImage = function(index) {
+                selectedFiles.splice(index, 1);
+                const grid = document.getElementById('images-grid');
+                grid.innerHTML = '';
+                selectedFiles.forEach((file, i) => displayImagePreview(file, i));
+                if (selectedFiles.length === 0) {
+                    grid.style.display = 'none';
                 }
-            });
+            };
 
             document.getElementById('create-event-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -495,7 +618,6 @@ app.get('/create-event', (c) => {
                 const title = document.getElementById('title').value;
                 const description = document.getElementById('description').value;
                 const event_date = document.getElementById('event_date').value;
-                const coverImageFile = document.getElementById('cover_image').files[0];
                 const submitBtn = document.getElementById('submit-btn');
                 const statusDiv = document.getElementById('upload-status');
 
@@ -503,23 +625,41 @@ app.get('/create-event', (c) => {
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Creating Event...';
 
-                    // Upload image if selected
+                    // Upload all images
                     let cover_image_url = null;
-                    if (coverImageFile) {
-                        statusDiv.textContent = 'Uploading image...';
-                        const formData = new FormData();
-                        formData.append('image', coverImageFile);
+                    const uploadedImages = [];
 
-                        const uploadResponse = await axios.post('/api/upload-image', formData, {
-                            headers: {
-                                'Content-Type': 'multipart/form-data'
+                    if (selectedFiles.length > 0) {
+                        statusDiv.textContent = \`Uploading \${selectedFiles.length} image(s)...\`;
+                        
+                        for (let i = 0; i < selectedFiles.length; i++) {
+                            statusDiv.textContent = \`Uploading image \${i + 1} of \${selectedFiles.length}...\`;
+                            
+                            const formData = new FormData();
+                            formData.append('image', selectedFiles[i]);
+
+                            const uploadResponse = await axios.post('/api/upload-image', formData, {
+                                headers: {
+                                    'Content-Type': 'multipart/form-data'
+                                }
+                            });
+
+                            if (uploadResponse.data.success) {
+                                uploadedImages.push({
+                                    url: uploadResponse.data.url,
+                                    key: uploadResponse.data.key,
+                                    is_cover: i === 0 ? 1 : 0,
+                                    display_order: i
+                                });
+                                
+                                // First image is the cover
+                                if (i === 0) {
+                                    cover_image_url = uploadResponse.data.url;
+                                }
                             }
-                        });
-
-                        if (uploadResponse.data.success) {
-                            cover_image_url = uploadResponse.data.url;
-                            statusDiv.textContent = 'Image uploaded!';
                         }
+                        
+                        statusDiv.textContent = 'All images uploaded!';
                     }
 
                     // Create event
@@ -528,7 +668,8 @@ app.get('/create-event', (c) => {
                         title,
                         description: description || undefined,
                         event_date,
-                        cover_image: cover_image_url || undefined
+                        cover_image: cover_image_url || undefined,
+                        images: uploadedImages
                     });
 
                     if (response.data.success) {
