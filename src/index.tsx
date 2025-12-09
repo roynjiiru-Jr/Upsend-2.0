@@ -301,7 +301,7 @@ app.get('/dashboard', (c) => {
         <nav class="bg-white shadow-sm">
             <div class="container mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">Upsend</h1>
+                    <a href="/dashboard" class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 cursor-pointer hover:opacity-80 transition-opacity">Upsend</a>
                     <div class="flex items-center gap-4">
                         <span id="user-name" class="text-gray-700"></span>
                         <button onclick="logout()" class="text-gray-600 hover:text-gray-800">
@@ -428,7 +428,7 @@ app.get('/create-event', (c) => {
         <nav class="bg-white shadow-sm">
             <div class="container mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">Upsend</h1>
+                    <a href="/dashboard" class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 cursor-pointer hover:opacity-80 transition-opacity">Upsend</a>
                     <a href="/dashboard" class="text-gray-600 hover:text-gray-800">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </a>
@@ -1383,7 +1383,7 @@ app.get('/event-details/:eventId', (c) => {
         <nav class="bg-white shadow-sm">
             <div class="container mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">Upsend</h1>
+                    <a href="/dashboard" class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 cursor-pointer hover:opacity-80 transition-opacity">Upsend</a>
                     <a href="/dashboard" class="text-gray-600 hover:text-gray-800">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </a>

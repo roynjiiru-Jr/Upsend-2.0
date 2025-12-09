@@ -131,7 +131,7 @@ events.get('/creator/list', requireAuth, async (c) => {
         e.*,
         COUNT(DISTINCT m.id) as message_count,
         COUNT(DISTINCT c.id) as contribution_count,
-        COALESCE(SUM(c.amount), 0) as total_contributions
+        (SELECT COALESCE(SUM(amount), 0) FROM contributions WHERE event_id = e.id) as total_contributions
       FROM events e
       LEFT JOIN messages m ON e.id = m.event_id
       LEFT JOIN contributions c ON e.id = c.event_id
