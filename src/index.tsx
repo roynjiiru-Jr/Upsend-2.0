@@ -314,11 +314,25 @@ app.get('/dashboard', (c) => {
 
         <div class="container mx-auto px-4 py-8">
             <div class="max-w-6xl mx-auto">
-                <div class="flex justify-between items-center mb-8">
+                <div class="flex justify-between items-center mb-6">
                     <h2 class="text-3xl font-bold text-gray-800">My Events</h2>
                     <a href="/create-event" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all">
                         <i class="fas fa-plus mr-2"></i>Create Event
                     </a>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="mb-6">
+                    <div class="relative max-w-md">
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            placeholder="Search events by title, description, or date..." 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                            oninput="filterEvents()"
+                        >
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
                 </div>
 
                 <div id="events-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -331,6 +345,8 @@ app.get('/dashboard', (c) => {
 
         <script>
             axios.defaults.headers.common['Authorization'] = 'Bearer ' + localStorage.getItem('session_token');
+
+            let allEvents = [];
 
             async function checkAuth() {
                 try {
@@ -345,48 +361,87 @@ app.get('/dashboard', (c) => {
             async function loadEvents() {
                 try {
                     const response = await axios.get('/api/events/creator/list');
-                    const events = response.data.events;
-                    
-                    const eventsContainer = document.getElementById('events-list');
-                    
-                    if (events.length === 0) {
+                    allEvents = response.data.events;
+                    displayEvents(allEvents);
+                } catch (error) {
+                    console.error('Failed to load events:', error);
+                }
+            }
+
+            function displayEvents(events) {
+                const eventsContainer = document.getElementById('events-list');
+                
+                if (events.length === 0) {
+                    const searchQuery = document.getElementById('search-input').value;
+                    if (searchQuery) {
+                        eventsContainer.innerHTML = \`
+                            <div class="col-span-full text-center py-12">
+                                <div class="text-gray-400 text-lg mb-4">No events found matching "\${searchQuery}"</div>
+                                <button onclick="clearSearch()" class="text-purple-600 hover:text-purple-700 font-medium">Clear search</button>
+                            </div>
+                        \`;
+                    } else {
                         eventsContainer.innerHTML = \`
                             <div class="col-span-full text-center py-12">
                                 <div class="text-gray-400 text-lg mb-4">No events yet</div>
                                 <a href="/create-event" class="text-purple-600 hover:text-purple-700 font-medium">Create your first event</a>
                             </div>
                         \`;
-                        return;
                     }
+                    return;
+                }
 
-                    eventsContainer.innerHTML = events.map(event => \`
-                        <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden">
-                            \${event.cover_image ? \`<img src="\${event.cover_image}" class="w-full h-48 object-cover">\` : \`
-                                <div class="w-full h-48 bg-gradient-to-br from-purple-400 to-pink-400"></div>
-                            \`}
-                            <div class="p-6">
-                                <h3 class="text-xl font-bold text-gray-800 mb-2">\${event.title}</h3>
-                                <p class="text-gray-600 text-sm mb-4">
-                                    <i class="far fa-calendar mr-1"></i>\${new Date(event.event_date).toLocaleDateString()}
-                                </p>
-                                <div class="flex justify-between text-sm text-gray-600 mb-4">
-                                    <span><i class="far fa-comment mr-1"></i>\${event.message_count || 0} messages</span>
-                                    <span><i class="fas fa-dollar-sign mr-1"></i>\${parseFloat(event.total_contributions || 0).toFixed(2)}</span>
-                                </div>
-                                <div class="flex gap-2">
-                                    <a href="/event-details/\${event.id}" class="flex-1 px-4 py-2 bg-purple-600 text-white text-center rounded-lg hover:bg-purple-700 transition-colors text-sm">
-                                        View Details
-                                    </a>
-                                    <button onclick="copyLink('\${event.shareable_link}')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm" title="Copy link">
-                                        <i class="fas fa-link"></i>
-                                    </button>
-                                </div>
+                eventsContainer.innerHTML = events.map(event => \`
+                    <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+                        \${event.cover_image ? \`<img src="\${event.cover_image}" class="w-full h-48 object-cover">\` : \`
+                            <div class="w-full h-48 bg-gradient-to-br from-purple-400 to-pink-400"></div>
+                        \`}
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">\${event.title}</h3>
+                            <p class="text-gray-600 text-sm mb-4">
+                                <i class="far fa-calendar mr-1"></i>\${new Date(event.event_date).toLocaleDateString()}
+                            </p>
+                            <div class="flex justify-between text-sm text-gray-600 mb-4">
+                                <span><i class="far fa-comment mr-1"></i>\${event.message_count || 0} messages</span>
+                                <span><i class="fas fa-dollar-sign mr-1"></i>\${parseFloat(event.total_contributions || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <a href="/event-details/\${event.id}" class="flex-1 px-4 py-2 bg-purple-600 text-white text-center rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                                    View Details
+                                </a>
+                                <button onclick="copyLink('\${event.shareable_link}')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm" title="Copy link">
+                                    <i class="fas fa-link"></i>
+                                </button>
                             </div>
                         </div>
-                    \`).join('');
-                } catch (error) {
-                    console.error('Failed to load events:', error);
+                    </div>
+                \`).join('');
+            }
+
+            function filterEvents() {
+                const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+                
+                if (!searchQuery) {
+                    displayEvents(allEvents);
+                    return;
                 }
+
+                const filteredEvents = allEvents.filter(event => {
+                    const title = (event.title || '').toLowerCase();
+                    const description = (event.description || '').toLowerCase();
+                    const date = new Date(event.event_date).toLocaleDateString().toLowerCase();
+                    
+                    return title.includes(searchQuery) || 
+                           description.includes(searchQuery) || 
+                           date.includes(searchQuery);
+                });
+
+                displayEvents(filteredEvents);
+            }
+
+            function clearSearch() {
+                document.getElementById('search-input').value = '';
+                displayEvents(allEvents);
             }
 
             function copyLink(shareableLink) {
