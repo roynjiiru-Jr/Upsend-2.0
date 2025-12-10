@@ -282,6 +282,15 @@ app.get('/auth', (c) => {
   `);
 });
 
+// Auth verify route (redirects to /auth with token for verification)
+app.get('/auth/verify', (c) => {
+  const token = c.req.query('token');
+  if (!token) {
+    return c.redirect('/auth');
+  }
+  return c.redirect(`/auth?token=${token}`);
+});
+
 // Dashboard page
 app.get('/dashboard', (c) => {
   return c.html(`
