@@ -999,8 +999,8 @@ app.get('/event/:shareableLink', async (c) => {
                                     <div class="mb-4">
                                         <label class="block text-gray-700 font-medium mb-2">Amount *</label>
                                         <div class="relative">
-                                            <span class="absolute left-4 top-3 text-gray-500">$</span>
-                                            <input type="number" id="amount" step="0.01" min="0.01" class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-600 focus:border-transparent" placeholder="0.00" required>
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                                            <input type="number" id="amount" step="0.01" min="0.01" class="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-600 focus:border-transparent" placeholder="0.00" required>
                                         </div>
                                     </div>
                                     <button type="submit" class="w-full bg-pink-600 text-white font-semibold py-3 rounded-lg hover:bg-pink-700 transition-colors">
@@ -1422,18 +1422,18 @@ app.get('/event-details/:eventId', (c) => {
                                 </button>
                             </div>
                             
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                                <div class="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
-                                    <div class="text-2xl sm:text-3xl font-bold text-purple-600">\${messages.length}</div>
-                                    <div class="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Messages</div>
+                            <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
+                                <div class="bg-white rounded-lg shadow p-3 sm:p-6 text-center">
+                                    <div class="text-xl sm:text-3xl font-bold text-purple-600">\${messages.length}</div>
+                                    <div class="text-xs sm:text-base text-gray-600 mt-1 sm:mt-2">Messages</div>
                                 </div>
-                                <div class="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
-                                    <div class="text-2xl sm:text-3xl font-bold text-pink-600">\${contributions.length}</div>
-                                    <div class="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Contributions</div>
+                                <div class="bg-white rounded-lg shadow p-3 sm:p-6 text-center">
+                                    <div class="text-xl sm:text-3xl font-bold text-pink-600">\${contributions.length}</div>
+                                    <div class="text-xs sm:text-base text-gray-600 mt-1 sm:mt-2">Contributions</div>
                                 </div>
-                                <div class="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
-                                    <div class="text-2xl sm:text-3xl font-bold text-green-600">$\${parseFloat(total_contributions).toFixed(2)}</div>
-                                    <div class="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2 whitespace-nowrap overflow-hidden text-ellipsis">Total Amount</div>
+                                <div class="bg-white rounded-lg shadow p-3 sm:p-6 text-center">
+                                    <div class="text-lg sm:text-3xl font-bold text-green-600 break-all">$\${parseFloat(total_contributions).toFixed(2)}</div>
+                                    <div class="text-xs sm:text-base text-gray-600 mt-1 sm:mt-2">Total Amount</div>
                                 </div>
                             </div>
                         </div>
