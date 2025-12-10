@@ -206,11 +206,31 @@ app.get('/auth', (c) => {
                 <div id="magic-link-sent" style="display:none;" class="text-center">
                     <div class="text-6xl text-green-500 mb-4">✓</div>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Check your email!</h3>
-                    <p class="text-gray-600 mb-4">We've sent you a magic link to sign in.</p>
-                    <p class="text-sm text-gray-500">For MVP testing, click the link below:</p>
-                    <a id="dev-link" href="#" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        Verify Magic Link
-                    </a>
+                    <p class="text-gray-600 mb-4">We've sent you a magic link to <span id="sent-email" class="font-semibold text-purple-600"></span></p>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                        <div class="flex items-start gap-3">
+                            <div class="text-2xl">📬</div>
+                            <div class="text-left">
+                                <p class="text-sm font-medium text-gray-700 mb-1">What to do next:</p>
+                                <ol class="text-sm text-gray-600 space-y-1">
+                                    <li>1. Open your email inbox</li>
+                                    <li>2. Look for an email from <strong>Upsend</strong></li>
+                                    <li>3. Click the "Login to Upsend" button</li>
+                                    <li>4. You'll be automatically logged in!</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-xs text-gray-500 mt-4">
+                        <i class="fas fa-clock mr-1"></i>
+                        Link expires in 15 minutes
+                    </p>
+                    
+                    <button onclick="location.reload()" class="mt-4 text-purple-600 hover:text-purple-700 text-sm font-medium">
+                        ← Try a different email
+                    </button>
                 </div>
 
                 <div id="error-message" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg" style="display:none;"></div>
@@ -235,15 +255,8 @@ app.get('/auth', (c) => {
                     if (response.data.success) {
                         document.getElementById('auth-form').style.display = 'none';
                         document.getElementById('magic-link-sent').style.display = 'block';
-                        
-                        // For MVP testing
-                        if (response.data.dev_link) {
-                            document.getElementById('dev-link').href = response.data.dev_link;
-                            document.getElementById('dev-link').onclick = (e) => {
-                                e.preventDefault();
-                                verifyToken(response.data.dev_token);
-                            };
-                        }
+                        document.getElementById('sent-email').textContent = email;
+                        errorDiv.style.display = 'none';
                     }
                 } catch (error) {
                     if (error.response?.data?.error === 'Name is required for new users') {
