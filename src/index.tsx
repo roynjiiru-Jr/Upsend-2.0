@@ -208,22 +208,7 @@ app.get('/auth', (c) => {
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Check your email!</h3>
                     <p class="text-gray-600 mb-4">We've sent you a magic link to <span id="sent-email" class="font-semibold text-purple-600"></span></p>
                     
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                        <div class="flex items-start gap-3">
-                            <div class="text-2xl">📬</div>
-                            <div class="text-left">
-                                <p class="text-sm font-medium text-gray-700 mb-1">What to do next:</p>
-                                <ol class="text-sm text-gray-600 space-y-1">
-                                    <li>1. Open your email inbox</li>
-                                    <li>2. Look for an email from <strong>Upsend</strong></li>
-                                    <li>3. Click the "Login to Upsend" button</li>
-                                    <li>4. You'll be automatically logged in!</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <p class="text-xs text-gray-500 mt-4">
+                    <p class="text-xs text-gray-500 mt-6">
                         <i class="fas fa-clock mr-1"></i>
                         Link expires in 15 minutes
                     </p>

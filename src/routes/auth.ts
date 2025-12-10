@@ -115,14 +115,23 @@ auth.post('/magic-link', async (c) => {
         </html>
       `;
 
-      await resend.emails.send({
+      const result = await resend.emails.send({
         from: 'Upsend <onboarding@resend.dev>',
         to: email,
         subject: '🎉 Your Magic Link to Upsend',
         html: emailHtml,
       });
 
-      console.log(`Magic link email sent to ${email}`);
+      console.log(`Magic link email sent to ${email}`, result);
+      
+      // Check if email sending failed
+      if (result.error) {
+        console.error('Resend API error:', result.error);
+        return c.json({ 
+          error: 'Failed to send magic link email',
+          details: result.error.message || 'Email delivery failed'
+        }, 500);
+      }
       
       return c.json({ 
         success: true, 
